@@ -32,16 +32,19 @@
             this.btnStart = new System.Windows.Forms.Button();
             this.tbSourceFile = new System.Windows.Forms.TextBox();
             this.tbSougou = new System.Windows.Forms.TextBox();
-            this.webBrowser1 = new System.Windows.Forms.WebBrowser();
             this.lbSourceFile = new System.Windows.Forms.Label();
             this.lbSougou = new System.Windows.Forms.Label();
             this.openSourceFile = new System.Windows.Forms.OpenFileDialog();
+            this.myWebBrowser = new System.Windows.Forms.WebBrowser();
+            this.rtbResult = new System.Windows.Forms.RichTextBox();
+            this.tbAddress = new System.Windows.Forms.TextBox();
+            this.label1 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // btnSourceFile
             // 
             this.btnSourceFile.Location = new System.Drawing.Point(714, 6);
-            this.btnSourceFile.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnSourceFile.Margin = new System.Windows.Forms.Padding(2);
             this.btnSourceFile.Name = "btnSourceFile";
             this.btnSourceFile.Size = new System.Drawing.Size(158, 36);
             this.btnSourceFile.TabIndex = 0;
@@ -52,7 +55,7 @@
             // btnStart
             // 
             this.btnStart.Location = new System.Drawing.Point(714, 46);
-            this.btnStart.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.btnStart.Margin = new System.Windows.Forms.Padding(2);
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(158, 36);
             this.btnStart.TabIndex = 0;
@@ -63,7 +66,7 @@
             // tbSourceFile
             // 
             this.tbSourceFile.Location = new System.Drawing.Point(108, 16);
-            this.tbSourceFile.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.tbSourceFile.Margin = new System.Windows.Forms.Padding(2);
             this.tbSourceFile.Name = "tbSourceFile";
             this.tbSourceFile.Size = new System.Drawing.Size(586, 21);
             this.tbSourceFile.TabIndex = 1;
@@ -71,20 +74,10 @@
             // tbSougou
             // 
             this.tbSougou.Location = new System.Drawing.Point(108, 56);
-            this.tbSougou.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.tbSougou.Margin = new System.Windows.Forms.Padding(2);
             this.tbSougou.Name = "tbSougou";
             this.tbSougou.Size = new System.Drawing.Size(586, 21);
             this.tbSougou.TabIndex = 1;
-            // 
-            // webBrowser1
-            // 
-            this.webBrowser1.Dock = System.Windows.Forms.DockStyle.Bottom;
-            this.webBrowser1.Location = new System.Drawing.Point(0, 86);
-            this.webBrowser1.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
-            this.webBrowser1.MinimumSize = new System.Drawing.Size(10, 10);
-            this.webBrowser1.Name = "webBrowser1";
-            this.webBrowser1.Size = new System.Drawing.Size(878, 665);
-            this.webBrowser1.TabIndex = 2;
             // 
             // lbSourceFile
             // 
@@ -108,19 +101,64 @@
             // 
             this.openSourceFile.FileName = "openSourceFile";
             // 
+            // myWebBrowser
+            // 
+            this.myWebBrowser.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.myWebBrowser.Location = new System.Drawing.Point(276, 126);
+            this.myWebBrowser.MinimumSize = new System.Drawing.Size(20, 20);
+            this.myWebBrowser.Name = "myWebBrowser";
+            this.myWebBrowser.Size = new System.Drawing.Size(924, 571);
+            this.myWebBrowser.TabIndex = 5;
+            // 
+            // rtbResult
+            // 
+            this.rtbResult.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left)));
+            this.rtbResult.Location = new System.Drawing.Point(14, 126);
+            this.rtbResult.Name = "rtbResult";
+            this.rtbResult.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
+            this.rtbResult.Size = new System.Drawing.Size(256, 571);
+            this.rtbResult.TabIndex = 6;
+            this.rtbResult.Text = "";
+            // 
+            // tbAddress
+            // 
+            this.tbAddress.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.tbAddress.Location = new System.Drawing.Point(108, 100);
+            this.tbAddress.Margin = new System.Windows.Forms.Padding(2);
+            this.tbAddress.Name = "tbAddress";
+            this.tbAddress.Size = new System.Drawing.Size(1092, 21);
+            this.tbAddress.TabIndex = 7;
+            // 
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(12, 103);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(65, 12);
+            this.label1.TabIndex = 8;
+            this.label1.Text = "来源网址：";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(878, 751);
+            this.ClientSize = new System.Drawing.Size(1212, 709);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.tbAddress);
+            this.Controls.Add(this.rtbResult);
+            this.Controls.Add(this.myWebBrowser);
             this.Controls.Add(this.lbSougou);
             this.Controls.Add(this.lbSourceFile);
-            this.Controls.Add(this.webBrowser1);
             this.Controls.Add(this.tbSougou);
             this.Controls.Add(this.tbSourceFile);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.btnSourceFile);
-            this.Margin = new System.Windows.Forms.Padding(2, 2, 2, 2);
+            this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
             this.Text = "Form1";
             this.ResumeLayout(false);
@@ -134,10 +172,13 @@
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.TextBox tbSourceFile;
         private System.Windows.Forms.TextBox tbSougou;
-        private System.Windows.Forms.WebBrowser webBrowser1;
         private System.Windows.Forms.Label lbSourceFile;
         private System.Windows.Forms.Label lbSougou;
         private System.Windows.Forms.OpenFileDialog openSourceFile;
+        private System.Windows.Forms.WebBrowser myWebBrowser;
+        private System.Windows.Forms.RichTextBox rtbResult;
+        private System.Windows.Forms.TextBox tbAddress;
+        private System.Windows.Forms.Label label1;
     }
 }
 
