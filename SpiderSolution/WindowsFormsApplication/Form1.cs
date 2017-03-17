@@ -33,19 +33,8 @@ namespace WindowsFormsApplication
 
         private void InitialData()
         {
-
-            WechatNames = OleDbHelper.ExecuteQuery(ConnectionString, "SELECT * FROM [Sheet1$]");
-            //WechatNames = new DataTable();
-            //OleDbConnection conn = new OleDbConnection(connStr);
-            //conn.Open();
-            //using (OleDbCommand cmd = conn.CreateCommand())
-            //{
-            //    DataTable schemaTable = conn.GetOleDbSchemaTable(OleDbSchemaGuid.Tables, new Object[] { null, null, null, "TABLE" });
-            //    cmd.CommandText = "SELECT * FROM [" + schemaTable.Rows[0]["TABLE_NAME"].ToString() + "]";
-            //    OleDbDataAdapter oda = new OleDbDataAdapter(cmd);
-            //    oda.Fill(WechatNames);
-            //}
-            //conn.Close();
+            string sql = "SELECT * FROM WechatList";
+            WechatNames = SqlHelper.ExecuteDataSetText(sql, null).Tables[0];
         }
 
         private void GetIndexUrl()
@@ -53,44 +42,47 @@ namespace WindowsFormsApplication
             foreach (DataRow dr in WechatNames.Rows)
             {
                 ConsoleMessage("****************************");
-                if (!string.IsNullOrEmpty(dr[1].ToString()))
+                if (!string.IsNullOrEmpty(dr["Url"].ToString()))
                 {
-                    ConsoleMessage(dr[0].ToString().Trim() + "已抓取");
+                    ConsoleMessage(dr["Name"].ToString().Trim() + "已抓取");
                     continue;
                 }
-                string url = string.Format(SearchUrl, System.Web.HttpUtility.UrlEncode(dr[0].ToString().Trim()));
+                string name = dr["Name"].ToString().Trim();
+                string wechatID = dr["ID"].ToString();
+                string url = string.Format(SearchUrl, System.Web.HttpUtility.UrlEncode(name));
+                
                 tbAddress.Text = url;
                 myWebBrowser.Navigate(url);
                 WaitWebPageLoad();
-                Delay(30000);
+               Delay(10000);
                 string result = myWebBrowser.DocumentText;
                 CheckUrlContent(ref result, "用户您好，您的访问过于频繁，为确认本次访问为正常用户行为，需要您协助验证。", url);
-                Regex reg1 = new Regex(@"<a target=""_blank"" uigs=""account_name_[0-9]"" href=""([^""]*)""><em><!--red_beg-->" + dr[0].ToString().Trim() + "<!--red_end--></em></a>", RegexOptions.IgnoreCase);
-                Regex reg2 = new Regex(@"<a target=""_blank"" uigs=""account_name_[0-9]"" href=""([^""]*)"">" + dr[0].ToString().Trim() + "</a>", RegexOptions.IgnoreCase);
+                Regex reg1 = new Regex(@"<a target=""_blank"" uigs=""account_name_[0-9]"" href=""([^""]*)""><em><!--red_beg-->" + name + "<!--red_end--></em></a>", RegexOptions.IgnoreCase);
+                Regex reg2 = new Regex(@"<a target=""_blank"" uigs=""account_name_[0-9]"" href=""([^""]*)"">" + name + "</a>", RegexOptions.IgnoreCase);
                 MatchCollection matches1 = reg1.Matches(result);
                 MatchCollection matches2 = reg2.Matches(result);
                 if (matches1 != null && matches1.Count > 0)
                 {
-                    ConsoleMessage(dr[0].ToString().Trim());
-                    GetDetailUrl(matches1[0].Groups[1].Value, dr[0].ToString());
+                    ConsoleMessage(name);
+                    GetDetailUrl(matches1[0].Groups[1].Value, dr[0].ToString(), wechatID);
                 }
                 else if (matches2 != null && matches2.Count > 0)
                 {
 
-                    ConsoleMessage(dr[0].ToString().Trim());
-                    GetDetailUrl(matches2[0].Groups[1].Value, dr[0].ToString());
+                    ConsoleMessage(name);
+                    GetDetailUrl(matches2[0].Groups[1].Value, dr[0].ToString(), wechatID);
                 }
                 else
                 {
 
-                    ConsoleMessage(dr[0].ToString().Trim() + "未搜索到匹配的主页");
+                    ConsoleMessage(name + "未搜索到匹配的主页");
                 }
 
                 ConsoleMessage("****************************");
             }
         }
 
-        private void GetDetailUrl(string url, string name)
+        private void GetDetailUrl(string url, string id,string wechatID)
         {
             ConsoleMessage("详情页信息抓取......");
             ConsoleMessage("--------------------------------");
@@ -98,7 +90,7 @@ namespace WindowsFormsApplication
             tbAddress.Text = url;
             int executeNum = 0;
             myWebBrowser.Navigate(url);
-            Delay(15000);
+            //Delay(15000);
             WaitWebPageLoad();
             string result = myWebBrowser.DocumentText;
             CheckUrlContent(ref result, "为了保护你的网络安全，请输入验证码", url);
@@ -110,22 +102,41 @@ namespace WindowsFormsApplication
                 WechatList wechatList = JsonHelper.DeserializeJsonToObject<WechatList>(json);
                 foreach (WechatCotent app in wechatList.list)
                 {
-                    ConsoleMessage(app.comm_msg_info.id);
-                    executeNum += AddWechatContent(app);
+                    //ConsoleMessage(app.comm_msg_info.id);
+                    executeNum += AddWechatContent(app,wechatID);
                 }
             }
-            string commandText = "UPDATE [Sheet1$] SET WechatIndex = '{0}',Result='{1}' WHERE WechatName = '{2}'";
-            commandText = string.Format(commandText, url, executeNum, name);
-            OleDbHelper.ExecuteNonQuery(ConnectionString, commandText);
+            string sql = "UPDATE WechatList SET Url = @url,DetailCount = @detailCount,ModifyDate = GETDATE() WHERE ID = @id ";
+            SqlParameter[] paramaters = new SqlParameter[3];
+            paramaters[0] = new SqlParameter("@url", url);
+            paramaters[1] = new SqlParameter("@detailCount", executeNum);
+            paramaters[2] = new SqlParameter("@id", id);
+            SqlHelper.ExecteNonQueryText(sql, paramaters);
             ConsoleMessage("--------------------------------");
         }
 
-        private void GetDetailContent()
+        private string GetDetailContent(string url)
         {
+            //url = url.Replace("&amp;", "&");
+            if (string.IsNullOrEmpty(url)) return string.Empty;
+            url=url.Contains("http://")?url : "http://mp.weixin.qq.com" + url;
+            tbAddress.Text = url;
+            myWebBrowser.Navigate(url);
+            WaitWebPageLoad();
+            //Delay(10000);
+            string result = myWebBrowser.DocumentText;
+            Regex reg = new Regex(@"<div class=""rich_media_content "" id=""js_content"">([.\s\S]*?(?=(</div>)))</div>");
+            MatchCollection matches = reg.Matches(result);
+            if (matches != null && matches.Count == 1)
+            {
+                return matches[0].Groups[1].Value;
+            }
+            else
+            {
+                return string.Empty;
+            }
 
         }
-
-
 
         public Form1()
         {
@@ -153,44 +164,86 @@ namespace WindowsFormsApplication
                 return;
             }
 
-
             StartWork();
         }
 
-        static public int AddWechatContent(WechatCotent content)
+        public int AddWechatContent(WechatCotent content,string wechatID)
         {
             int result = 0;
-            string sql = @"INSERT INTO ArticleList VALUES(@author,@contentUrl,@copyrightStat,@cover,@digest,@fileID,@sourceUrl,@title,@articleDate,@fakeID,@commID,@commStatus,@commType)";
-            SqlParameter[] parameters = new SqlParameter[13];
+            string sql = @"IF NOT EXISTS(SELECT ID FROM ArticleList WHERE CommID = @commID AND Title = @title)
+                                            INSERT INTO ArticleList
+                                                            ([Author]
+                                                            ,[ContentUrl]
+                                                            ,[CopyrightStat]
+                                                            ,[Cover]
+                                                            ,[Digest]
+                                                            ,[FileID]
+                                                            ,[SourceUrl]
+                                                            ,[Title]
+                                                            ,[ArticleDate]
+                                                            ,[FakeID]
+                                                            ,[CommID]
+                                                            ,[CommStatus]
+                                                            ,[CommType]
+                                                            ,[Content]
+                                                            ,[WechatID]) 
+                                            VALUES
+                                                            (@author
+                                                            ,@contentUrl
+                                                            ,@copyrightStat
+                                                            ,@cover
+                                                            ,@digest
+                                                            ,@fileID
+                                                            ,@sourceUrl
+                                                            ,@title
+                                                            ,@articleDate
+                                                            ,@fakeID
+                                                            ,@commID
+                                                            ,@commStatus
+                                                            ,@commType
+                                                            ,@content
+                                                            ,@wechatID) ";
+            SqlParameter[] parameters = new SqlParameter[15];
             parameters[0] = new SqlParameter("@author", content.app_msg_ext_info.author);
-            parameters[1] = new SqlParameter("@contentUrl", content.app_msg_ext_info.content_url);
+            parameters[1] = new SqlParameter("@contentUrl", content.app_msg_ext_info.content_url.Replace("&amp;", "&"));
             parameters[2] = new SqlParameter("@copyrightStat", content.app_msg_ext_info.copyright_stat == null ? "" : content.app_msg_ext_info.copyright_stat);
             parameters[3] = new SqlParameter("@cover", content.app_msg_ext_info.cover);
             parameters[4] = new SqlParameter("@digest", content.app_msg_ext_info.digest);
             parameters[5] = new SqlParameter("@fileID", content.app_msg_ext_info.fileid);
-            parameters[6] = new SqlParameter("@sourceUrl", content.app_msg_ext_info.source_url);
+            parameters[6] = new SqlParameter("@sourceUrl", content.app_msg_ext_info.source_url.Replace("&amp;", "&"));
             parameters[7] = new SqlParameter("@title", content.app_msg_ext_info.title);
             parameters[8] = new SqlParameter("@articleDate", content.comm_msg_info.datetime);
             parameters[9] = new SqlParameter("@fakeID", content.comm_msg_info.fakeid);
             parameters[10] = new SqlParameter("@commID", content.comm_msg_info.id);
             parameters[11] = new SqlParameter("@commStatus", content.comm_msg_info.status);
             parameters[12] = new SqlParameter("@commType", content.comm_msg_info.type);
-
+            parameters[13] = new SqlParameter("@content", GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&")));
+            parameters[14] = new SqlParameter("@wechatID", wechatID);
             result += SqlHelper.ExecteNonQueryText(sql, parameters);
+            ConsoleMessage(content.app_msg_ext_info.title);
             foreach (multi_app_msg_item_list li in content.app_msg_ext_info.multi_app_msg_item_list)
             {
                 parameters[0].Value = li.author;
-                parameters[1].Value = li.content_url;
+                parameters[1].Value = li.content_url.Replace("&amp;", "&");
                 parameters[2].Value = li.copyright_stat == null ? "" : li.copyright_stat;
                 parameters[3].Value = li.cover;
                 parameters[4].Value = li.digest;
                 parameters[5].Value = li.fileid;
                 parameters[6].Value = li.source_url;
                 parameters[7].Value = li.title;
+                parameters[13].Value = GetDetailContent(li.content_url.Replace("&amp;", "&"));
                 result += SqlHelper.ExecteNonQueryText(sql, parameters);
+                ConsoleMessage(li.title);
             }
 
             return result;
+        }
+        static public int AddWechatArticleContent(string content,int id)
+        {
+            string sql = "UPDATE ArticleList SET Content =@content WHERE ID = @id";
+            SqlParameter acontent = new SqlParameter("@content", content);
+            SqlParameter aid = new SqlParameter("@id", id);
+            return SqlHelper.ExecteNonQueryText(sql, acontent, aid);
         }
 
         private void ConsoleMessage(string content)
@@ -255,6 +308,21 @@ namespace WindowsFormsApplication
                 Application.DoEvents();//转让控制权              
             }
             return;
+        }
+
+        private void btnContent_Click(object sender, EventArgs e)
+        {
+            string sql = "SELECT ID,ContentUrl FROM ArticleList WHERE Content IS NULL OR Content = ''";
+            DataSet ds = SqlHelper.ExecuteDataSetText(sql, null);
+            if (ds.Tables.Count > 0)
+            {
+                foreach (DataRow dr in ds.Tables[0].Rows)
+                {
+                    string content = GetDetailContent(dr["ContentUrl"].ToString());
+                    AddWechatArticleContent(content, Convert.ToInt32(dr["ID"]));
+                    ConsoleMessage("文章ID：" + dr["ID"].ToString());
+                }
+            }
         }
     }
 }

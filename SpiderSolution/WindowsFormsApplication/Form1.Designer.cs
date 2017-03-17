@@ -39,6 +39,7 @@
             this.rtbResult = new System.Windows.Forms.RichTextBox();
             this.tbAddress = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.btnContent = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnSourceFile
@@ -59,7 +60,7 @@
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(158, 36);
             this.btnStart.TabIndex = 0;
-            this.btnStart.Text = "开始";
+            this.btnStart.Text = "抓取列表";
             this.btnStart.UseVisualStyleBackColor = true;
             this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
             // 
@@ -143,6 +144,17 @@
             this.label1.TabIndex = 8;
             this.label1.Text = "来源网址：";
             // 
+            // btnContent
+            // 
+            this.btnContent.Location = new System.Drawing.Point(886, 47);
+            this.btnContent.Margin = new System.Windows.Forms.Padding(2);
+            this.btnContent.Name = "btnContent";
+            this.btnContent.Size = new System.Drawing.Size(158, 36);
+            this.btnContent.TabIndex = 0;
+            this.btnContent.Text = "抓取详情";
+            this.btnContent.UseVisualStyleBackColor = true;
+            this.btnContent.Click += new System.EventHandler(this.btnContent_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -156,6 +168,7 @@
             this.Controls.Add(this.lbSourceFile);
             this.Controls.Add(this.tbSougou);
             this.Controls.Add(this.tbSourceFile);
+            this.Controls.Add(this.btnContent);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.btnSourceFile);
             this.Margin = new System.Windows.Forms.Padding(2);
@@ -179,6 +192,7 @@
         private System.Windows.Forms.RichTextBox rtbResult;
         private System.Windows.Forms.TextBox tbAddress;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button btnContent;
     }
 }
 
