@@ -252,4 +252,4 @@ paket-files/
 *.sln.iml
 
 #APP CONFIGURATION
-App.config
+/App.config
