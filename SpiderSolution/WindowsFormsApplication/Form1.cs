@@ -5,7 +5,9 @@ using System.Data;
 using System.Data.OleDb;
 using System.Data.SqlClient;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -26,8 +28,6 @@ namespace WindowsFormsApplication
             ConsoleMessage("#########抓取程序开始#########");
             InitialData();
             GetIndexUrl();
-            //GetDetailUrl();
-            //GetDetailContent();
             ConsoleMessage("#########抓取程序结束#########");
         }
 
@@ -50,11 +50,11 @@ namespace WindowsFormsApplication
                 string name = dr["Name"].ToString().Trim();
                 string wechatID = dr["ID"].ToString();
                 string url = string.Format(SearchUrl, System.Web.HttpUtility.UrlEncode(name));
-                
+
                 tbAddress.Text = url;
                 myWebBrowser.Navigate(url);
                 WaitWebPageLoad();
-               Delay(10000);
+                Delay(10000);
                 string result = myWebBrowser.DocumentText;
                 CheckUrlContent(ref result, "用户您好，您的访问过于频繁，为确认本次访问为正常用户行为，需要您协助验证。", url);
                 Regex reg1 = new Regex(@"<a target=""_blank"" uigs=""account_name_[0-9]"" href=""([^""]*)""><em><!--red_beg-->" + name + "<!--red_end--></em></a>", RegexOptions.IgnoreCase);
@@ -82,7 +82,7 @@ namespace WindowsFormsApplication
             }
         }
 
-        private void GetDetailUrl(string url, string id,string wechatID)
+        private void GetDetailUrl(string url, string id, string wechatID)
         {
             ConsoleMessage("详情页信息抓取......");
             ConsoleMessage("--------------------------------");
@@ -103,7 +103,7 @@ namespace WindowsFormsApplication
                 foreach (WechatCotent app in wechatList.list)
                 {
                     //ConsoleMessage(app.comm_msg_info.id);
-                    executeNum += AddWechatContent(app,wechatID);
+                    executeNum += AddWechatContent(app, wechatID);
                 }
             }
             string sql = "UPDATE WechatList SET Url = @url,DetailCount = @detailCount,ModifyDate = GETDATE() WHERE ID = @id ";
@@ -119,23 +119,60 @@ namespace WindowsFormsApplication
         {
             //url = url.Replace("&amp;", "&");
             if (string.IsNullOrEmpty(url)) return string.Empty;
-            url=url.Contains("http://")?url : "http://mp.weixin.qq.com" + url;
+            url = url.Contains("http://") ? url : "http://mp.weixin.qq.com" + url;
             tbAddress.Text = url;
             myWebBrowser.Navigate(url);
             WaitWebPageLoad();
             //Delay(10000);
             string result = myWebBrowser.DocumentText;
             Regex reg = new Regex(@"<div class=""rich_media_content "" id=""js_content"">([.\s\S]*?(?=(</div>)))</div>");
+            Regex imgReg = new Regex(@"<img[.\s\S]*?(?=(data-src=""))data-src=""([^\?""]*)\?wx_fmt=([^""]*)""[^/]*/>");
             MatchCollection matches = reg.Matches(result);
             if (matches != null && matches.Count == 1)
             {
-                return matches[0].Groups[1].Value;
+                string content = matches[0].Groups[1].Value;
+                MatchCollection imgMatches = imgReg.Matches(content);
+                foreach (Match match in imgMatches)
+                {
+                    string guid = Guid.NewGuid().ToString();
+                    string oldUrl = match.Groups[2].Value + "?wx_fmt=" + match.Groups[3].Value;
+                    string imgName = guid + "." + match.Groups[3].Value;
+                    DownloadImg(oldUrl, "E:\\Image\\" + imgName);
+                    content = content.Replace(match.Groups[0].Value, "<img src='/Image/" + imgName + "' />");
+                }
+
+                return content;
             }
             else
             {
                 return string.Empty;
             }
 
+        }
+
+        private void DownloadImg(string Url,string newUrl)
+        {
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url);
+            request.Method = "GET";
+            request.ContentType = "text/html;charset=UTF-8";
+            request.UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727; .NET CLR 3.0.04506.648; .NET CLR 3.5.21022)";
+            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+            Stream myResponseStream = response.GetResponseStream();
+            long count = response.ContentLength;
+            int offset = 0;
+            byte[] buf = new byte[count];
+            while (count > 0)
+            {
+                int n = myResponseStream.Read(buf, offset, (int)count);
+                if (n == 0) break;
+                count -= n;
+                offset += n;
+            }
+
+            FileStream writer = new FileStream( newUrl, FileMode.OpenOrCreate, FileAccess.Write);
+            writer.Write(buf, 0, buf.Length);
+            writer.Flush();
+            writer.Close();
         }
 
         public Form1()
@@ -167,7 +204,7 @@ namespace WindowsFormsApplication
             StartWork();
         }
 
-        public int AddWechatContent(WechatCotent content,string wechatID)
+        public int AddWechatContent(WechatCotent content, string wechatID)
         {
             int result = 0;
             string sql = @"IF NOT EXISTS(SELECT ID FROM ArticleList WHERE CommID = @commID AND Title = @title)
@@ -238,7 +275,7 @@ namespace WindowsFormsApplication
 
             return result;
         }
-        static public int AddWechatArticleContent(string content,int id)
+        static public int AddWechatArticleContent(string content, int id)
         {
             string sql = "UPDATE ArticleList SET Content =@content WHERE ID = @id";
             SqlParameter acontent = new SqlParameter("@content", content);
