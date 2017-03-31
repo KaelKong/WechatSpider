@@ -151,7 +151,7 @@
             this.btnContent.Name = "btnContent";
             this.btnContent.Size = new System.Drawing.Size(158, 36);
             this.btnContent.TabIndex = 0;
-            this.btnContent.Text = "抓取详情";
+            this.btnContent.Text = "重置";
             this.btnContent.UseVisualStyleBackColor = true;
             this.btnContent.Click += new System.EventHandler(this.btnContent_Click);
             // 

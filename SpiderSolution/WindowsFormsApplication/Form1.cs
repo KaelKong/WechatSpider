@@ -33,8 +33,8 @@ namespace WindowsFormsApplication
 
         private void InitialData()
         {
-            string sql = "SELECT * FROM WechatList";
-            WechatNames = SqlHelper.ExecuteDataSetText(sql, null).Tables[0];
+            string sql = "SELECT * FROM WechatList WHERE WechatStatus = 1";
+            WechatNames = SqlHelper.ExecuteDataSetText(sql).Tables[0];
         }
 
         private void GetIndexUrl()
@@ -125,7 +125,7 @@ namespace WindowsFormsApplication
             WaitingJs(@"<span id=""sg_readNum3""></span>");
             string result = myWebBrowser.Document.Body.OuterHtml;
             Regex reg = new Regex(@"<div class=""rich_media_content "" id=""js_content"">([.\s\S]*?(?=(</div>)))</div>[.\s\S]*?(?=(sg_readNum3))sg_readNum3"">([^<]*)</span>[.\s\S]*?(?=(sg_likeNum3))sg_likeNum3"">([^<]*)</span>");
-            Regex imgReg = new Regex(@"<img[.\s\S]*?(?=(data-src=""))data-src=""([^\?""]*)\?wx_fmt=([^""]*)""[^/]*/>");
+            Regex imgReg = new Regex(@"<img[.\s\S]*?(?=(data-src=""))data-src=""([^""]*)""[^>]*>");
 
             MatchCollection matches = reg.Matches(result);
             if (matches != null && matches.Count == 1)
@@ -133,15 +133,22 @@ namespace WindowsFormsApplication
                 string content = matches[0].Groups[1].Value;
                 string readNum = matches[0].Groups[4].Value;
                 string likeNum = matches[0].Groups[6].Value;
+                
+                string folder = Guid.NewGuid().ToString();
+                Directory.CreateDirectory("E:\\Image\\" + folder);
                 MatchCollection imgMatches = imgReg.Matches(content);
                 foreach (Match match in imgMatches)
                 {
+                    
                     string guid = Guid.NewGuid().ToString();
-                    string oldUrl = match.Groups[2].Value + "?wx_fmt=" + match.Groups[3].Value;
-                    string imgName = guid + "." + match.Groups[3].Value;
-                    DownloadImg(oldUrl, "E:\\Image\\" + imgName);
-                    //content = content.Replace(oldUrl, oldUrl + @""" src=""/Image/" + imgName + @""" ");
-                    content = content.Replace(match.Groups[0].Value, "<img src='/Image/" + imgName + "' style='width:100%' />");
+                    string oldUrl = match.Groups[2].Value;
+                    string[] imgArr = oldUrl.Split(new string[] { "?wx_fmt=" }, StringSplitOptions.RemoveEmptyEntries);
+                    string exetent = "jpg";
+                    if (imgArr.Length == 2 && !string.IsNullOrEmpty(imgArr[1])) exetent = imgArr[1];
+                    string imgName = guid + "." + exetent;
+                    DownloadImg(oldUrl, "E:\\Image\\" + folder + "\\" + imgName);
+                    //content = content.Replace(oldUrl, "/Image/" + folder + "/" + imgName);
+                    content = content.Replace(match.Groups[0].Value, "<img src='/Image/" + folder + "/" + imgName + "' style='width:100%'>");
                 }
 
                 return Tuple.Create<string, string, string>(content, readNum, likeNum);
@@ -159,8 +166,8 @@ namespace WindowsFormsApplication
             string[] formats = url.Split(new string[] { "wx_fmt=" }, StringSplitOptions.RemoveEmptyEntries);
 
             string newUrl = Guid.NewGuid().ToString() + "." + (formats.Length == 2 ? formats[1] : "jpg");
-            DownloadImg(url, "E:\\Image\\" + newUrl);
-            return newUrl;
+            DownloadImg(url, "E:\\Image\\Cover\\" + newUrl);
+            return "Cover/" + newUrl;
         }
 
         private void DownloadImg(string Url, string newUrl)
@@ -389,17 +396,10 @@ ELSE
 
         private void btnContent_Click(object sender, EventArgs e)
         {
-            //string sql = "SELECT ID,ContentUrl FROM ArticleList WHERE Content IS NULL OR Content = ''";
-            //DataSet ds = SqlHelper.ExecuteDataSetText(sql, null);
-            //if (ds.Tables.Count > 0)
-            //{
-            //    foreach (DataRow dr in ds.Tables[0].Rows)
-            //    {
-            //        string content = GetDetailContent(dr["ContentUrl"].ToString());
-            //        AddWechatArticleContent(content, Convert.ToInt32(dr["ID"]));
-            //        ConsoleMessage("文章ID：" + dr["ID"].ToString());
-            //    }
-            //}
+            string sql = "UPDATE WechatList SET Url = null,DetailCount = 0 WHERE WechatStatus = 1;TRUNCATE TABLE ArticleList;";
+            int result = SqlHelper.ExecteNonQueryText(sql);
+            if (result > 0) MessageBox.Show("重置成功");
+            else MessageBox.Show("重置失败");
         }
 
         private void WaitingJs(string key)
