@@ -40,6 +40,7 @@
             this.tbAddress = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnContent = new System.Windows.Forms.Button();
+            this.prgb = new System.Windows.Forms.ProgressBar();
             this.SuspendLayout();
             // 
             // btnSourceFile
@@ -151,15 +152,23 @@
             this.btnContent.Name = "btnContent";
             this.btnContent.Size = new System.Drawing.Size(158, 36);
             this.btnContent.TabIndex = 0;
-            this.btnContent.Text = "重置";
+            this.btnContent.Text = "清理文章";
             this.btnContent.UseVisualStyleBackColor = true;
             this.btnContent.Click += new System.EventHandler(this.btnContent_Click);
+            // 
+            // prgb
+            // 
+            this.prgb.Location = new System.Drawing.Point(886, 8);
+            this.prgb.Name = "prgb";
+            this.prgb.Size = new System.Drawing.Size(314, 23);
+            this.prgb.TabIndex = 9;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1212, 709);
+            this.Controls.Add(this.prgb);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.tbAddress);
             this.Controls.Add(this.rtbResult);
@@ -193,6 +202,7 @@
         private System.Windows.Forms.TextBox tbAddress;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnContent;
+        private System.Windows.Forms.ProgressBar prgb;
     }
 }
 

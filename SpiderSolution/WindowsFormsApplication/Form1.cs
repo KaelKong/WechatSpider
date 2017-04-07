@@ -39,14 +39,19 @@ namespace WindowsFormsApplication
 
         private void GetIndexUrl()
         {
+            prgb.Maximum = WechatNames.Rows.Count;
+            int i = 1;
             foreach (DataRow dr in WechatNames.Rows)
             {
+                prgb.Value = i++;
                 ConsoleMessage("****************************");
-                if (!string.IsNullOrEmpty(dr["Url"].ToString()))
+                TimeSpan span = DateTime.Now - Convert.ToDateTime(dr["ModifyDate"]);
+                if (span.TotalHours < 12)
                 {
-                    ConsoleMessage(dr["Name"].ToString().Trim() + "已抓取");
+                    ConsoleMessage(dr["Name"].ToString().Trim() + "距上次抓取不足12小时");
                     continue;
                 }
+
                 string name = dr["Name"].ToString().Trim();
                 string wechatID = dr["ID"].ToString();
                 string url = string.Format(SearchUrl, System.Web.HttpUtility.UrlEncode(name));
@@ -68,7 +73,6 @@ namespace WindowsFormsApplication
                 }
                 else if (matches2 != null && matches2.Count > 0)
                 {
-
                     ConsoleMessage(name);
                     GetDetailUrl(matches2[0].Groups[1].Value, dr[0].ToString(), wechatID);
                 }
@@ -95,14 +99,18 @@ namespace WindowsFormsApplication
             CheckUrlContent(ref result, "为了保护你的网络安全，请输入验证码", url);
             Regex reg = new Regex(@"(?=(var msgList = ))var msgList =([.\s\S]*?(?=(}}]};))}}]});");
             MatchCollection matches = reg.Matches(result);
+
             foreach (Match m in matches)
             {
                 string json = m.Groups[2].Value;
                 WechatList wechatList = JsonHelper.DeserializeJsonToObject<WechatList>(json);
                 foreach (WechatCotent app in wechatList.list)
-
                 {
-                    executeNum += AddWechatContent(app, wechatID);
+                    DateTime at = WebHelper.GetTime(app.comm_msg_info.datetime);
+                    if (at.ToString("yyyy-MM-dd") == DateTime.Now.ToString("yyyy-MM-dd"))
+                    {
+                        executeNum += AddWechatContent(app, wechatID);
+                    }
                 }
             }
             string sql = "UPDATE WechatList SET Url = @url,DetailCount = @detailCount,ModifyDate = GETDATE() WHERE ID = @id ";
@@ -114,7 +122,7 @@ namespace WindowsFormsApplication
             ConsoleMessage("--------------------------------");
         }
 
-        private Tuple<string,string,string> GetDetailContent(string url)
+        private Tuple<string, string, string> GetDetailContent(string url, string folder)
         {
             //url = url.Replace("&amp;", "&");
             if (string.IsNullOrEmpty(url)) return Tuple.Create<string, string, string>("", "", "");
@@ -133,22 +141,23 @@ namespace WindowsFormsApplication
                 string content = matches[0].Groups[1].Value;
                 string readNum = matches[0].Groups[4].Value;
                 string likeNum = matches[0].Groups[6].Value;
-                
-                string folder = Guid.NewGuid().ToString();
-                Directory.CreateDirectory("E:\\Image\\" + folder);
+
+
+
                 MatchCollection imgMatches = imgReg.Matches(content);
                 foreach (Match match in imgMatches)
                 {
-                    
-                    string guid = Guid.NewGuid().ToString();
+
+                    string guid = Guid.NewGuid().ToString("N");
                     string oldUrl = match.Groups[2].Value;
-                    string[] imgArr = oldUrl.Split(new string[] { "?wx_fmt=" }, StringSplitOptions.RemoveEmptyEntries);
-                    string exetent = "jpg";
-                    if (imgArr.Length == 2 && !string.IsNullOrEmpty(imgArr[1])) exetent = imgArr[1];
-                    string imgName = guid + "." + exetent;
-                    DownloadImg(oldUrl, "E:\\Image\\" + folder + "\\" + imgName);
+                    //string[] imgArr = oldUrl.Split(new string[] { "?wx_fmt=" }, StringSplitOptions.RemoveEmptyEntries);
+                    //string exetent = "jpg";
+                    //if (imgArr.Length == 2 && !string.IsNullOrEmpty(imgArr[1])) exetent = imgArr[1];
+                    //string imgName = guid + "." + exetent;
+                    //DownloadImg(oldUrl, folder + "\\" + imgName);
                     //content = content.Replace(oldUrl, "/Image/" + folder + "/" + imgName);
-                    content = content.Replace(match.Groups[0].Value, "<img src='/Image/" + folder + "/" + imgName + "' style='width:100%'>");
+                    string newUrl = ReplaceAsLocalImg(oldUrl, "E://Image//" + folder);
+                    content = content.Replace(match.Groups[0].Value, "<img src='/Image/" + folder + "/" + newUrl + "/>");
                 }
 
                 return Tuple.Create<string, string, string>(content, readNum, likeNum);
@@ -160,39 +169,46 @@ namespace WindowsFormsApplication
 
         }
 
-        private string ReplaceAsLocalImg(string url)
+        private string ReplaceAsLocalImg(string url, string folderPath)
         {
             if (string.IsNullOrEmpty(url)) return "";
             string[] formats = url.Split(new string[] { "wx_fmt=" }, StringSplitOptions.RemoveEmptyEntries);
-
-            string newUrl = Guid.NewGuid().ToString() + "." + (formats.Length == 2 ? formats[1] : "jpg");
-            DownloadImg(url, "E:\\Image\\Cover\\" + newUrl);
-            return "Cover/" + newUrl;
+            string newUrl = Guid.NewGuid().ToString("N") + "." + (formats.Length == 2 ? formats[1] : "jpg");
+            DownloadImg(url, folderPath + "\\" + newUrl);
+            return newUrl;
         }
 
         private void DownloadImg(string Url, string newUrl)
         {
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url);
-            request.Method = "GET";
-            request.ContentType = "text/html;charset=UTF-8";
-            request.UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727; .NET CLR 3.0.04506.648; .NET CLR 3.5.21022)";
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            Stream myResponseStream = response.GetResponseStream();
-            long count = response.ContentLength;
-            int offset = 0;
-            byte[] buf = new byte[count];
-            while (count > 0)
+            try
             {
-                int n = myResponseStream.Read(buf, offset, (int)count);
-                if (n == 0) break;
-                count -= n;
-                offset += n;
-            }
+                Url = Url.Contains("http://") ? Url : "http://mp.weixin.qq.com" + Url;
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(Url);
+                request.Method = "GET";
+                request.ContentType = "text/html;charset=UTF-8";
+                request.UserAgent = "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; .NET CLR 2.0.50727; .NET CLR 3.0.04506.648; .NET CLR 3.5.21022)";
+                HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+                Stream myResponseStream = response.GetResponseStream();
+                long count = response.ContentLength;
+                int offset = 0;
+                byte[] buf = new byte[count];
+                while (count > 0)
+                {
+                    int n = myResponseStream.Read(buf, offset, (int)count);
+                    if (n == 0) break;
+                    count -= n;
+                    offset += n;
+                }
 
-            FileStream writer = new FileStream(newUrl, FileMode.OpenOrCreate, FileAccess.Write);
-            writer.Write(buf, 0, buf.Length);
-            writer.Flush();
-            writer.Close();
+                FileStream writer = new FileStream(newUrl, FileMode.OpenOrCreate, FileAccess.Write);
+                writer.Write(buf, 0, buf.Length);
+                writer.Flush();
+                writer.Close();
+            }
+            catch
+            {
+
+            }
         }
 
         public Form1()
@@ -200,6 +216,8 @@ namespace WindowsFormsApplication
             InitializeComponent();
             tbSougou.Text = @"http://weixin.sogou.com/weixin?type=1&query={0}&ie=utf8&s_from=input&_sug_=y&_sug_type_=";
             tbSourceFile.Text = @"C:\Users\KaelKong\Desktop\wechatnaem.xls";
+            prgb.Minimum = 0;
+
         }
 
         private void btnSourceFile_Click(object sender, EventArgs e)
@@ -245,7 +263,8 @@ namespace WindowsFormsApplication
                                                             ,[Content]
                                                             ,[WechatID]
                                                             ,ReadNum
-                                                            ,LikeNum) 
+                                                            ,LikeNum
+                                                            ,FolderName) 
                                             VALUES
                                                             (@author
                                                             ,@contentUrl
@@ -263,29 +282,15 @@ namespace WindowsFormsApplication
                                                             ,@content
                                                             ,@wechatID
                                                             ,@readNum
-                                                            ,@likeNum)
-ELSE
-							UPDATE ArticleList SET
-							[Author] = @author
-							,[ContentUrl] = @contentUrl
-							,[CopyrightStat] = @copyrightStat
-							,[Cover]=@cover
-							,[Digest]=@digest
-							,[FileID]=@fileID
-							,[SourceUrl]=@sourceUrl
-							,[Title]=@title
-							,[ArticleDate]=@articleDate
-							,[FakeID]=@fakeID
-							,[CommID]=@commID
-							,[CommStatus]=@commStatus
-							,[CommType]=@commType
-							,[Content]=@content
-							,[WechatID]=@wechatID WHERE CommID = @commID AND Title = @title";
-            SqlParameter[] parameters = new SqlParameter[17];
+                                                            ,@likeNum
+                                                            ,@folderName)";
+            string folderName = Guid.NewGuid().ToString("N");
+            ConsoleMessage(content.app_msg_ext_info.title);
+            SqlParameter[] parameters = new SqlParameter[18];
             parameters[0] = new SqlParameter("@author", content.app_msg_ext_info.author);
             parameters[1] = new SqlParameter("@contentUrl", content.app_msg_ext_info.content_url.Replace("&amp;", "&"));
             parameters[2] = new SqlParameter("@copyrightStat", content.app_msg_ext_info.copyright_stat == null ? "" : content.app_msg_ext_info.copyright_stat);
-            parameters[3] = new SqlParameter("@cover", ReplaceAsLocalImg(content.app_msg_ext_info.cover));
+            parameters[3] = new SqlParameter("@cover", "");
             parameters[4] = new SqlParameter("@digest", content.app_msg_ext_info.digest);
             parameters[5] = new SqlParameter("@fileID", content.app_msg_ext_info.fileid);
             parameters[6] = new SqlParameter("@sourceUrl", content.app_msg_ext_info.source_url.Replace("&amp;", "&"));
@@ -295,29 +300,43 @@ ELSE
             parameters[10] = new SqlParameter("@commID", content.comm_msg_info.id);
             parameters[11] = new SqlParameter("@commStatus", content.comm_msg_info.status);
             parameters[12] = new SqlParameter("@commType", content.comm_msg_info.type);
-            Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"));
-            parameters[13] = new SqlParameter("@content", details.Item1);
+            parameters[13] = new SqlParameter("@content", "");
             parameters[14] = new SqlParameter("@wechatID", wechatID);
-            parameters[15] = new SqlParameter("@readNum", details.Item2);
-            parameters[16] = new SqlParameter("@likeNum", details.Item3);
-            result += SqlHelper.ExecteNonQueryText(sql, parameters);
-            ConsoleMessage(content.app_msg_ext_info.title);
-            foreach (multi_app_msg_item_list li in content.app_msg_ext_info.multi_app_msg_item_list)
+            parameters[15] = new SqlParameter("@readNum", "");
+            parameters[16] = new SqlParameter("@likeNum", "");
+            parameters[17] = new SqlParameter("@folderName", folderName);
+            if (IsNewArticle(content.comm_msg_info.id, content.app_msg_ext_info.title))
             {
-                parameters[0].Value = li.author;
-                parameters[1].Value = li.content_url.Replace("&amp;", "&");
-                parameters[2].Value = li.copyright_stat == null ? "" : li.copyright_stat;
-                parameters[3].Value = ReplaceAsLocalImg(li.cover);
-                parameters[4].Value = li.digest;
-                parameters[5].Value = li.fileid;
-                parameters[6].Value = li.source_url;
-                parameters[7].Value = li.title;
-                details = GetDetailContent(li.content_url.Replace("&amp;", "&"));
+                Directory.CreateDirectory("E:\\Image\\" + folderName);
+                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName);
+                parameters[3].Value = folderName + "/" + ReplaceAsLocalImg(content.app_msg_ext_info.cover, "E:\\Image\\" + folderName);
                 parameters[13].Value = details.Item1;
                 parameters[15].Value = details.Item2;
                 parameters[16].Value = details.Item3;
                 result += SqlHelper.ExecteNonQueryText(sql, parameters);
+            }
+
+            foreach (multi_app_msg_item_list li in content.app_msg_ext_info.multi_app_msg_item_list)
+            {
                 ConsoleMessage(li.title);
+                if (IsNewArticle(content.comm_msg_info.id, li.title))
+                {
+                    Directory.CreateDirectory("E:\\Image\\" + folderName);
+                    parameters[0].Value = li.author;
+                    parameters[1].Value = li.content_url.Replace("&amp;", "&");
+                    parameters[2].Value = li.copyright_stat == null ? "" : li.copyright_stat;
+                    parameters[3].Value = folderName + "/" + ReplaceAsLocalImg(li.cover, "E:\\Image\\" + folderName);
+                    parameters[4].Value = li.digest;
+                    parameters[5].Value = li.fileid;
+                    parameters[6].Value = li.source_url;
+                    parameters[7].Value = li.title;
+                    Tuple<string, string, string> details = GetDetailContent(li.content_url.Replace("&amp;", "&"), folderName);
+                    parameters[13].Value = details.Item1;
+                    parameters[15].Value = details.Item2;
+                    parameters[16].Value = details.Item3;
+                    result += SqlHelper.ExecteNonQueryText(sql, parameters);
+                }
+
             }
 
             return result;
@@ -396,10 +415,15 @@ ELSE
 
         private void btnContent_Click(object sender, EventArgs e)
         {
-            string sql = "UPDATE WechatList SET Url = null,DetailCount = 0 WHERE WechatStatus = 1;TRUNCATE TABLE ArticleList;";
-            int result = SqlHelper.ExecteNonQueryText(sql);
-            if (result > 0) MessageBox.Show("重置成功");
-            else MessageBox.Show("重置失败");
+            string sql = "SELECT TOP 100 ID, Cover,Content FROM ArticleList ";
+            DataSet ds = SqlHelper.ExecuteDataSetText(sql);
+            if (ds.Tables != null && ds.Tables.Count > 0)
+            {
+                foreach(DataRow dr in ds.Tables[0].Rows)
+                {
+                    RemoveArticle(dr);
+                }
+            }
         }
 
         private void WaitingJs(string key)
@@ -408,6 +432,58 @@ ELSE
             {
                 if (!myWebBrowser.Document.Body.OuterHtml.Contains(key)) break;
                 Delay(5000);
+            }
+        }
+
+        private string GetLastArticleDate(int wechatID)
+        {
+            string sql = "SELECT MAX(ArticleDate) FROM ArticleList WHERE WechatID = @id";
+            SqlParameter id = new SqlParameter("@id", wechatID);
+            object result = SqlHelper.ExecuteScalarText(sql, id);
+            return result == null ? "" : result.ToString();
+        }
+
+        private bool IsNewArticle(string commID, string title)
+        {
+            string sql = "SELECT ID FROM ArticleList WHERE CommID = @commID AND Title = @title";
+            SqlParameter[] parameters = new SqlParameter[2];
+            parameters[0] = new SqlParameter("@commID", commID);
+            parameters[1] = new SqlParameter("@title", title);
+            object result = SqlHelper.ExecuteScalarText(sql, parameters);
+            return result == null;
+        }
+
+        private void RemoveArticle(DataRow dr)
+        {
+            string content = dr["content"].ToString();
+            string cover = dr["cover"].ToString();
+            Regex reg = new Regex(@"<img src='([^']*)' style='width:100%'>");
+            Match match = reg.Match(content);
+            if (match.Success)
+            {
+                string img = match.Groups[1].Value;
+                ConsoleMessage(img);
+            }
+            else
+            {
+                MessageBox.Show(dr["ID"].ToString());
+            }
+          
+        }
+
+        private void RemoveFile(string file)
+        {
+            if (File.Exists(file))
+            {
+                File.Delete(file);
+            }
+        }
+
+        private void RemoveDirectory(string path)
+        {
+            if (Directory.Exists(path))
+            {
+                Directory.Delete(path);
             }
         }
     }

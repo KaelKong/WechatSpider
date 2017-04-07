@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Net;
 using System.Text;
 
@@ -46,5 +47,22 @@ namespace WindowsFormsApplication
             myResponseStream.Close();
             return retString;
         }
+
+        public static Int64 GetTimeStamp(DateTime datetime)
+        {
+            TimeSpan ts = datetime - new DateTime(1970, 1, 1, 0, 0, 0, 0);
+            return Convert.ToInt64(ts.TotalSeconds);
+        }
+
+        public static DateTime GetTime(string timeStamp)
+        {
+
+            DateTime dtStart = TimeZone.CurrentTimeZone.ToLocalTime(new DateTime(1970, 1, 1));
+            long lTime = long.Parse(timeStamp + "0000000");
+            TimeSpan toNow = new TimeSpan(lTime);
+            return dtStart.Add(toNow);
+
+        }
+
     }
 }
