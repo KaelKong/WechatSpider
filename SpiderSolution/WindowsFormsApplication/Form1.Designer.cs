@@ -30,17 +30,18 @@
         {
             this.btnSourceFile = new System.Windows.Forms.Button();
             this.btnStart = new System.Windows.Forms.Button();
-            this.tbSourceFile = new System.Windows.Forms.TextBox();
             this.tbSougou = new System.Windows.Forms.TextBox();
-            this.lbSourceFile = new System.Windows.Forms.Label();
             this.lbSougou = new System.Windows.Forms.Label();
-            this.openSourceFile = new System.Windows.Forms.OpenFileDialog();
             this.myWebBrowser = new System.Windows.Forms.WebBrowser();
             this.rtbResult = new System.Windows.Forms.RichTextBox();
             this.tbAddress = new System.Windows.Forms.TextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.btnContent = new System.Windows.Forms.Button();
             this.prgb = new System.Windows.Forms.ProgressBar();
+            this.button1 = new System.Windows.Forms.Button();
+            this.openSourceFile = new System.Windows.Forms.OpenFileDialog();
+            this.lbSourceFile = new System.Windows.Forms.Label();
+            this.tbSourceFile = new System.Windows.Forms.TextBox();
             this.SuspendLayout();
             // 
             // btnSourceFile
@@ -50,7 +51,7 @@
             this.btnSourceFile.Name = "btnSourceFile";
             this.btnSourceFile.Size = new System.Drawing.Size(158, 36);
             this.btnSourceFile.TabIndex = 0;
-            this.btnSourceFile.Text = "源文件";
+            this.btnSourceFile.Text = "抓取活动";
             this.btnSourceFile.UseVisualStyleBackColor = true;
             this.btnSourceFile.Click += new System.EventHandler(this.btnSourceFile_Click);
             // 
@@ -65,14 +66,6 @@
             this.btnStart.UseVisualStyleBackColor = true;
             this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
             // 
-            // tbSourceFile
-            // 
-            this.tbSourceFile.Location = new System.Drawing.Point(108, 16);
-            this.tbSourceFile.Margin = new System.Windows.Forms.Padding(2);
-            this.tbSourceFile.Name = "tbSourceFile";
-            this.tbSourceFile.Size = new System.Drawing.Size(586, 21);
-            this.tbSourceFile.TabIndex = 1;
-            // 
             // tbSougou
             // 
             this.tbSougou.Location = new System.Drawing.Point(108, 56);
@@ -80,15 +73,6 @@
             this.tbSougou.Name = "tbSougou";
             this.tbSougou.Size = new System.Drawing.Size(586, 21);
             this.tbSougou.TabIndex = 1;
-            // 
-            // lbSourceFile
-            // 
-            this.lbSourceFile.AutoSize = true;
-            this.lbSourceFile.Location = new System.Drawing.Point(12, 19);
-            this.lbSourceFile.Name = "lbSourceFile";
-            this.lbSourceFile.Size = new System.Drawing.Size(77, 12);
-            this.lbSourceFile.TabIndex = 3;
-            this.lbSourceFile.Text = "源文件路径：";
             // 
             // lbSougou
             // 
@@ -98,10 +82,6 @@
             this.lbSougou.Size = new System.Drawing.Size(65, 12);
             this.lbSougou.TabIndex = 3;
             this.lbSougou.Text = "抓取地址：";
-            // 
-            // openSourceFile
-            // 
-            this.openSourceFile.FileName = "openSourceFile";
             // 
             // myWebBrowser
             // 
@@ -160,8 +140,40 @@
             // 
             this.prgb.Location = new System.Drawing.Point(886, 8);
             this.prgb.Name = "prgb";
-            this.prgb.Size = new System.Drawing.Size(314, 23);
+            this.prgb.Size = new System.Drawing.Size(320, 23);
             this.prgb.TabIndex = 9;
+            // 
+            // button1
+            // 
+            this.button1.Location = new System.Drawing.Point(1048, 47);
+            this.button1.Margin = new System.Windows.Forms.Padding(2);
+            this.button1.Name = "button1";
+            this.button1.Size = new System.Drawing.Size(158, 36);
+            this.button1.TabIndex = 0;
+            this.button1.Text = "抓取头像";
+            this.button1.UseVisualStyleBackColor = true;
+            this.button1.Click += new System.EventHandler(this.button1_Click);
+            // 
+            // openSourceFile
+            // 
+            this.openSourceFile.FileName = "openSourceFile";
+            // 
+            // lbSourceFile
+            // 
+            this.lbSourceFile.AutoSize = true;
+            this.lbSourceFile.Location = new System.Drawing.Point(12, 19);
+            this.lbSourceFile.Name = "lbSourceFile";
+            this.lbSourceFile.Size = new System.Drawing.Size(77, 12);
+            this.lbSourceFile.TabIndex = 3;
+            this.lbSourceFile.Text = "源文件路径：";
+            // 
+            // tbSourceFile
+            // 
+            this.tbSourceFile.Location = new System.Drawing.Point(108, 16);
+            this.tbSourceFile.Margin = new System.Windows.Forms.Padding(2);
+            this.tbSourceFile.Name = "tbSourceFile";
+            this.tbSourceFile.Size = new System.Drawing.Size(586, 21);
+            this.tbSourceFile.TabIndex = 1;
             // 
             // Form1
             // 
@@ -177,6 +189,7 @@
             this.Controls.Add(this.lbSourceFile);
             this.Controls.Add(this.tbSougou);
             this.Controls.Add(this.tbSourceFile);
+            this.Controls.Add(this.button1);
             this.Controls.Add(this.btnContent);
             this.Controls.Add(this.btnStart);
             this.Controls.Add(this.btnSourceFile);
@@ -192,17 +205,18 @@
 
         private System.Windows.Forms.Button btnSourceFile;
         private System.Windows.Forms.Button btnStart;
-        private System.Windows.Forms.TextBox tbSourceFile;
         private System.Windows.Forms.TextBox tbSougou;
-        private System.Windows.Forms.Label lbSourceFile;
         private System.Windows.Forms.Label lbSougou;
-        private System.Windows.Forms.OpenFileDialog openSourceFile;
         private System.Windows.Forms.WebBrowser myWebBrowser;
         private System.Windows.Forms.RichTextBox rtbResult;
         private System.Windows.Forms.TextBox tbAddress;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button btnContent;
         private System.Windows.Forms.ProgressBar prgb;
+        private System.Windows.Forms.Button button1;
+        private System.Windows.Forms.OpenFileDialog openSourceFile;
+        private System.Windows.Forms.Label lbSourceFile;
+        private System.Windows.Forms.TextBox tbSourceFile;
     }
 }
 
