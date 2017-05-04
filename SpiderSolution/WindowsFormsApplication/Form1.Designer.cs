@@ -42,6 +42,7 @@
             this.openSourceFile = new System.Windows.Forms.OpenFileDialog();
             this.lbSourceFile = new System.Windows.Forms.Label();
             this.tbSourceFile = new System.Windows.Forms.TextBox();
+            this.BtnDZDP = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // btnSourceFile
@@ -71,7 +72,7 @@
             this.tbSougou.Location = new System.Drawing.Point(108, 56);
             this.tbSougou.Margin = new System.Windows.Forms.Padding(2);
             this.tbSougou.Name = "tbSougou";
-            this.tbSougou.Size = new System.Drawing.Size(586, 21);
+            this.tbSougou.Size = new System.Drawing.Size(404, 21);
             this.tbSougou.TabIndex = 1;
             // 
             // lbSougou
@@ -152,7 +153,6 @@
             this.button1.TabIndex = 0;
             this.button1.Text = "抓取头像";
             this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
             // 
             // openSourceFile
             // 
@@ -172,8 +172,19 @@
             this.tbSourceFile.Location = new System.Drawing.Point(108, 16);
             this.tbSourceFile.Margin = new System.Windows.Forms.Padding(2);
             this.tbSourceFile.Name = "tbSourceFile";
-            this.tbSourceFile.Size = new System.Drawing.Size(586, 21);
+            this.tbSourceFile.Size = new System.Drawing.Size(404, 21);
             this.tbSourceFile.TabIndex = 1;
+            // 
+            // BtnDZDP
+            // 
+            this.BtnDZDP.Location = new System.Drawing.Point(552, 6);
+            this.BtnDZDP.Margin = new System.Windows.Forms.Padding(2);
+            this.BtnDZDP.Name = "BtnDZDP";
+            this.BtnDZDP.Size = new System.Drawing.Size(158, 36);
+            this.BtnDZDP.TabIndex = 0;
+            this.BtnDZDP.Text = "抓取评论";
+            this.BtnDZDP.UseVisualStyleBackColor = true;
+            this.BtnDZDP.Click += new System.EventHandler(this.BtnDZDP_Click);
             // 
             // Form1
             // 
@@ -192,6 +203,7 @@
             this.Controls.Add(this.button1);
             this.Controls.Add(this.btnContent);
             this.Controls.Add(this.btnStart);
+            this.Controls.Add(this.BtnDZDP);
             this.Controls.Add(this.btnSourceFile);
             this.Margin = new System.Windows.Forms.Padding(2);
             this.Name = "Form1";
@@ -217,6 +229,7 @@
         private System.Windows.Forms.OpenFileDialog openSourceFile;
         private System.Windows.Forms.Label lbSourceFile;
         private System.Windows.Forms.TextBox tbSourceFile;
+        private System.Windows.Forms.Button BtnDZDP;
     }
 }
 

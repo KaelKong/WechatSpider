@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Model;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -123,6 +124,57 @@ namespace WindowsFormsApplication
 
                     ConsoleMessage(name + "未搜索到匹配的主页");
                 }
+
+                ConsoleMessage("****************************");
+            }
+        }
+
+        private void GetIndexUrl3()
+        {
+            prgb.Maximum = WechatNames.Rows.Count;
+            int i = 1;
+            Regex reg = new Regex(@"<li id=""rev_[0-9]*"" data-id=""[0-9]*"">\s*<div class=""pic"">\s*<a target=""_blank"" rel=""nofollow"" href=""/member/[0-9]*"" user-id=""([0-9]*)"" class=""J_card"">\s*<img title=""([^""]*)"" alt=""[^""]*"" src=""([^""]*)"">[.\s\S]*?(?=(J_brief-cont))J_brief-cont"">([.\s\S]*?(?=(</div>)))</div>[.\s\S]*?(?=(class=""time""))class=""time"">([^<]*)</span>[.\s\S]*?(?=(heart-name))heart-name"">赞</span>\s*(.*)");
+
+            foreach (DataRow dr in WechatNames.Rows)
+            {
+                prgb.Value = i++;
+                ConsoleMessage(dr["MallName"].ToString());
+                string name = dr["WechatName"].ToString().Trim();
+                string wechatID = dr["Name"].ToString();
+                string url = dr["Link"].ToString();
+                if (string.IsNullOrEmpty(url)) continue;
+                tbAddress.Text = url + $"/review_all?pageno=1";
+                myWebBrowser.Navigate(tbAddress.Text);
+                WaitWebPageLoad();
+                Delay(1000);
+                string result = myWebBrowser.DocumentText;
+                MatchCollection matches = reg.Matches(result);
+                if (matches != null && matches.Count > 0)
+                {
+                    foreach (Match match in matches)
+                    {
+                        DZDPCommentModel model = new DZDPCommentModel()
+                        {
+                            AuthorID = match.Groups[1].Value,
+                            AuthorName = match.Groups[2].Value,
+                            AuthorIcon = match.Groups[3].Value,
+                            Content = match.Groups[5].Value.Trim(),
+                            AddDate = match.Groups[8].Value,
+                            LikeNum = match.Groups[10].Value,
+                            MallID = Convert.ToInt32(dr["MallID"]),
+                            MallName = dr["MallName"].ToString(),
+                            CommentStatus = 1
+                        };
+
+                        Save(model);
+                    }
+                }
+                else
+                {
+                    break;
+                }
+
+
 
                 ConsoleMessage("****************************");
             }
@@ -612,42 +664,7 @@ namespace WindowsFormsApplication
 
         private void button1_Click(object sender, EventArgs e)
         {
-            InitialData("SELECT * FROM WechatList WHERE WechatStatus = 1");
-            prgb.Maximum = WechatNames.Rows.Count;
-            int i = 1;
-            foreach (DataRow dr in WechatNames.Rows)
-            {
-                prgb.Value = i++;
-                ConsoleMessage("****************************");
-                string name = dr["Name"].ToString().Trim();
-                string wechatID = dr["ID"].ToString();
-                string url = string.Format(SearchUrl, System.Web.HttpUtility.UrlEncode(name));
-                tbAddress.Text = url;
-                myWebBrowser.Navigate(url);
-                WaitWebPageLoad();
-                Delay(10000);
-                string result = myWebBrowser.DocumentText;
-                CheckUrlContent(ref result, "用户您好，您的访问过于频繁，为确认本次访问为正常用户行为，需要您协助验证。", url);
-                Regex reg = new Regex(@"<a target=""_blank"" uigs=""account_image_0""[.\s\S]*?(?=(<img))<img src=""([^""]*)""", RegexOptions.IgnoreCase);
 
-                MatchCollection matches = reg.Matches(result);
-
-                if (matches != null && matches.Count == 1)
-                {
-                    ConsoleMessage(name);
-                    string icon = Guid.NewGuid().ToString("N") + ".jpg";
-                    DownloadImg(matches[0].Groups[2].Value, "E://Avatar//" + icon);
-                    UpdateIcon(Convert.ToInt32(dr["ID"]), icon);
-                }
-
-                else
-                {
-
-                    ConsoleMessage(name + "未搜索到匹配的主页");
-                }
-
-                ConsoleMessage("****************************");
-            }
         }
 
         public void UpdateIcon(int id, string icon)
@@ -657,6 +674,49 @@ namespace WindowsFormsApplication
             parameters[0] = new SqlParameter("@icon", icon);
             parameters[1] = new SqlParameter("@id", id);
             SqlHelper.ExecteNonQueryText(sql, parameters);
+        }
+
+        private void BtnDZDP_Click(object sender, EventArgs e)
+        {
+            InitialData("SELECT * FROM DZDP");
+            GetIndexUrl3();
+        }
+
+        public void Save(DZDPCommentModel model)
+        {
+            string sql = @"INSERT INTO [dbo].[MallComment]
+           ([MallID]
+           ,[MallName]
+           ,[AuthorID]
+           ,[AuthorName]
+           ,[AuthorIcon]
+           ,[Content]
+           ,[AddDate]
+           ,[LikeNum]
+           ,[CommentStatus])
+     VALUES
+           (@mallID
+           ,@mallName
+           ,@authorID
+           ,@authorName
+           ,@authorIcon
+           ,@content
+           ,@addDate
+           ,@likeNum
+           ,@commentStatus)";
+
+            SqlParameter[] parameters = new SqlParameter[9];
+            parameters[0] = new SqlParameter("@mallID", model.MallID);
+            parameters[1] = new SqlParameter("@mallName", model.MallName);
+            parameters[2] = new SqlParameter("@authorID", model.AuthorID);
+            parameters[3] = new SqlParameter("@authorName", model.AuthorName);
+            parameters[4] = new SqlParameter("@authorIcon", model.AuthorIcon);
+            parameters[5] = new SqlParameter("@content", model.Content);
+            parameters[6] = new SqlParameter("@addDate", model.AddDate);
+            parameters[7] = new SqlParameter("@likeNum", model.LikeNum);
+            parameters[8] = new SqlParameter("@commentStatus", model.CommentStatus);
+            SqlHelper.ExecteNonQueryText(sql, parameters);
+            //SQLHelper.ExecuteNonQueryText(sql, parameters);
         }
     }
 }
