@@ -541,7 +541,7 @@ namespace WindowsFormsApplication
         public int AddWechatContent2(WechatCotent content, string wechatID, string wechatName)
         {
             int result = 0;
-            string sql = @"INSERT INTO Campaign(Title,WechatName,Cover,Content,ReadNum,LikeNum) VALUES(@title,@wechatName,@cover,@content,@readNum,@likeNum)";
+            string sql = @"INSERT INTO Campaign(Title,WechatName,Cover,Content,ReadNum,LikeNum,CampaignStatus) VALUES(@title,@wechatName,@cover,@content,@readNum,@likeNum,0)";
             string folderName = Guid.NewGuid().ToString("N");
             ConsoleMessage(content.app_msg_ext_info.title);
             SqlParameter[] parameters = new SqlParameter[6];
