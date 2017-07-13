@@ -423,8 +423,10 @@ namespace WindowsFormsApplication
 
         private void btnSourceFile_Click(object sender, EventArgs e)
         {
+            ConsoleMessage("#########抓取程序开始#########");
             InitialData("SELECT * FROM DZDP");
             GetIndexUrl2();
+            ConsoleMessage("#########抓取程序结束#########");
         }
 
         private void btnStart_Click(object sender, EventArgs e)
