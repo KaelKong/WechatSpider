@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Configuration;
 using System.Data;
 using System.Data.OleDb;
 using System.Data.SqlClient;
@@ -23,11 +24,15 @@ namespace WindowsFormsApplication
 
         private string ConnectionString { get; set; }
         private DataTable WechatNames { get; set; }
+        private DateTime LastDate { get; set; }
+        private string ArticleFolder = ConfigurationManager.AppSettings["article"];
+        private string CampaignFolder = ConfigurationManager.AppSettings["campaign"];
 
         public void StartWork()
         {
             ConsoleMessage("#########抓取程序开始#########");
             InitialData("SELECT * FROM WechatList WHERE WechatStatus = 1");
+            LastDate = Convert.ToDateTime(SqlHelper.ExecuteScalarText("SELECT TOP 1 AddDate FROM ArticleList ORDER BY ID DESC"));
             GetIndexUrl();
             ConsoleMessage("#########抓取程序结束#########");
         }
@@ -47,12 +52,12 @@ namespace WindowsFormsApplication
             {
                 prgb.Value = i++;
                 ConsoleMessage("****************************");
-                TimeSpan span = DateTime.Now - Convert.ToDateTime(dr["ModifyDate"]);
-                if (span.TotalHours < 12)
-                {
-                    ConsoleMessage(dr["Name"].ToString().Trim() + "距上次抓取不足12小时");
-                    continue;
-                }
+                //TimeSpan span = DateTime.Now - Convert.ToDateTime(dr["ModifyDate"]);
+                //if (span.TotalHours < 12)
+                //{
+                //    ConsoleMessage(dr["Name"].ToString().Trim() + "距上次抓取不足12小时");
+                //    continue;
+                //}
 
                 string name = dr["Name"].ToString().Trim();
                 string wechatID = dr["ID"].ToString();
@@ -79,12 +84,12 @@ namespace WindowsFormsApplication
                 if (matches1 != null && matches1.Count > 0)
                 {
                     ConsoleMessage(name);
-                    GetDetailUrl(matches1[0].Groups[1].Value, dr[0].ToString(), wechatID, name,dr);
+                    GetDetailUrl(matches1[0].Groups[1].Value, dr[0].ToString(), wechatID, name, dr);
                 }
                 else if (matches2 != null && matches2.Count > 0)
                 {
                     ConsoleMessage(name);
-                    GetDetailUrl(matches2[0].Groups[1].Value, dr[0].ToString(), wechatID, name,dr);
+                    GetDetailUrl(matches2[0].Groups[1].Value, dr[0].ToString(), wechatID, name, dr);
                 }
                 else
                 {
@@ -99,6 +104,7 @@ namespace WindowsFormsApplication
         {
             prgb.Maximum = WechatNames.Rows.Count;
             int i = 1;
+
             foreach (DataRow dr in WechatNames.Rows)
             {
                 prgb.Value = i++;
@@ -106,7 +112,6 @@ namespace WindowsFormsApplication
                 string name = dr["WechatName"].ToString().Trim();
                 string wechatID = dr["Name"].ToString();
                 string url = string.Format(SearchUrl, System.Web.HttpUtility.UrlEncode(name));
-
                 tbAddress.Text = url;
                 myWebBrowser.Navigate(url);
                 WaitWebPageLoad();
@@ -242,13 +247,13 @@ namespace WindowsFormsApplication
                     ConsoleMessage(name + "未搜索到匹配的主页");
                 }
 
- 
+
 
                 ConsoleMessage("****************************");
             }
         }
 
-        private void GetDetailUrl(string url, string id, string wechatID, string wechatName,DataRow rowData)
+        private void GetDetailUrl(string url, string id, string wechatID, string wechatName, DataRow rowData)
         {
             ConsoleMessage("详情页信息抓取......");
             ConsoleMessage("--------------------------------");
@@ -269,7 +274,7 @@ namespace WindowsFormsApplication
                 foreach (WechatCotent app in wechatList.list)
                 {
                     DateTime at = WebHelper.GetTime(app.comm_msg_info.datetime);
-                    if (at.ToString("yyyy-MM-dd") == DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd"))
+                    if (at > LastDate)
                     {
                         executeNum += AddWechatContent(app, wechatID, wechatName, rowData["Icon"].ToString());
                     }
@@ -306,17 +311,17 @@ namespace WindowsFormsApplication
                 foreach (WechatCotent app in wechatList.list)
                 {
                     DateTime at = WebHelper.GetTime(app.comm_msg_info.datetime);
-                    if (at.ToString("yyyy-MM-dd") == DateTime.Now.AddDays(-1).ToString("yyyy-MM-dd"))
+                    if (at > LastDate)
                     {
                         executeNum += AddWechatContent2(app, wechatID, wechatName);
                     }
-                   
+
                 }
             }
             ConsoleMessage("--------------------------------");
         }
 
-        private Tuple<string, string, string> GetDetailContent(string url, string folder,string newFolder)
+        private Tuple<string, string, string> GetDetailContent(string url, string folder, string newFolder)
         {
             //url = url.Replace("&amp;", "&");
             if (string.IsNullOrEmpty(url)) return Tuple.Create<string, string, string>("", "", "");
@@ -349,8 +354,8 @@ namespace WindowsFormsApplication
                     //string imgName = guid + "." + exetent;
                     //DownloadImg(oldUrl, folder + "\\" + imgName);
                     //content = content.Replace(oldUrl, "/Image/" + folder + "/" + imgName);
-                    string newUrl = ReplaceAsLocalImg(oldUrl, "E://"+ newFolder + "//" + folder);
-                    content = content.Replace(match.Groups[0].Value, "<img src='/"+ newFolder + "/" + folder + "/" + newUrl + "' />");
+                    string newUrl = ReplaceAsLocalImg(oldUrl, "E://" + newFolder + "//" + folder);
+                    content = content.Replace(match.Groups[0].Value, "<img src='/" + newFolder + "/" + folder + "/" + newUrl + "' />");
                 }
 
                 return Tuple.Create<string, string, string>(content, readNum, likeNum);
@@ -368,7 +373,7 @@ namespace WindowsFormsApplication
             return ReplaceAsLocalImg(url, folderPath, Guid.NewGuid().ToString("N"));
         }
 
-        private string ReplaceAsLocalImg(string url, string folderPath,string name)
+        private string ReplaceAsLocalImg(string url, string folderPath, string name)
         {
             if (string.IsNullOrEmpty(url)) return "";
             string[] formats = url.Split(new string[] { "wx_fmt=" }, StringSplitOptions.RemoveEmptyEntries);
@@ -400,7 +405,7 @@ namespace WindowsFormsApplication
                 }
 
                 if (File.Exists(newUrl)) File.Delete(newUrl);
-               
+
                 FileStream writer = new FileStream(newUrl, FileMode.OpenOrCreate, FileAccess.Write);
                 writer.Write(buf, 0, buf.Length);
                 writer.Flush();
@@ -425,6 +430,7 @@ namespace WindowsFormsApplication
         {
             ConsoleMessage("#########抓取程序开始#########");
             InitialData("SELECT * FROM DZDP");
+            LastDate = Convert.ToDateTime(SqlHelper.ExecuteScalarText("SELECT TOP 1 AddDate FROM Campaign ORDER BY ID DESC"));
             GetIndexUrl2();
             ConsoleMessage("#########抓取程序结束#########");
         }
@@ -434,7 +440,7 @@ namespace WindowsFormsApplication
             StartWork();
         }
 
-        public int AddWechatContent(WechatCotent content, string wechatID, string wechatName,string wechatIcon)
+        public int AddWechatContent(WechatCotent content, string wechatID, string wechatName, string wechatIcon)
         {
             int result = 0;
             string sql = @"IF NOT EXISTS(SELECT ID FROM ArticleList WHERE CommID = @commID AND Title = @title)
@@ -505,9 +511,9 @@ namespace WindowsFormsApplication
             parameters[19] = new SqlParameter("@wechatIcon", wechatIcon);
             if (IsNewArticle(content.comm_msg_info.id, content.app_msg_ext_info.title))
             {
-                Directory.CreateDirectory("E:\\Image\\" + folderName);
-                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName,"Image");
-                parameters[3].Value = "/Image/" + folderName + "/" + ReplaceAsLocalImg(content.app_msg_ext_info.cover, "E:\\Image\\" + folderName);
+                Directory.CreateDirectory(ArticleFolder + folderName);
+                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName, "Image");
+                parameters[3].Value = "/Image/" + folderName + "/" + ReplaceAsLocalImg(content.app_msg_ext_info.cover, ArticleFolder + folderName);
                 parameters[13].Value = details.Item1;
                 parameters[15].Value = string.IsNullOrEmpty(details.Item2) ? "0" : details.Item2;
                 parameters[16].Value = string.IsNullOrEmpty(details.Item3) ? "0" : details.Item3;
@@ -519,16 +525,16 @@ namespace WindowsFormsApplication
                 ConsoleMessage(li.title);
                 if (IsNewArticle(content.comm_msg_info.id, li.title))
                 {
-                    Directory.CreateDirectory("E:\\Image\\" + folderName);
+                    Directory.CreateDirectory(ArticleFolder + folderName);
                     parameters[0].Value = li.author;
                     parameters[1].Value = li.content_url.Replace("&amp;", "&");
                     parameters[2].Value = li.copyright_stat == null ? "" : li.copyright_stat;
-                    parameters[3].Value = "/Image/" + folderName + "/" + ReplaceAsLocalImg(li.cover, "E:\\Image\\" + folderName);
+                    parameters[3].Value = "/Image/" + folderName + "/" + ReplaceAsLocalImg(li.cover, ArticleFolder + folderName);
                     parameters[4].Value = li.digest;
                     parameters[5].Value = li.fileid;
                     parameters[6].Value = li.source_url;
                     parameters[7].Value = li.title;
-                    Tuple<string, string, string> details = GetDetailContent(li.content_url.Replace("&amp;", "&"), folderName,"Image");
+                    Tuple<string, string, string> details = GetDetailContent(li.content_url.Replace("&amp;", "&"), folderName, "Image");
                     parameters[13].Value = details.Item1;
                     parameters[15].Value = string.IsNullOrEmpty(details.Item2) ? "0" : details.Item2;
                     parameters[16].Value = string.IsNullOrEmpty(details.Item3) ? "0" : details.Item3;
@@ -556,9 +562,9 @@ namespace WindowsFormsApplication
 
             if (IsNewCampaign(content.app_msg_ext_info.title, wechatName))
             {
-                Directory.CreateDirectory("E:\\Camp\\" + folderName);
-                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName,"Camp");
-                parameters[2].Value = "/Camp/"+ folderName + "/" + ReplaceAsLocalImg(content.app_msg_ext_info.cover, "E:\\Camp\\" + folderName);
+                Directory.CreateDirectory(CampaignFolder + folderName);
+                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName, "Camp");
+                parameters[2].Value = "/Camp/" + folderName + "/" + ReplaceAsLocalImg(content.app_msg_ext_info.cover, CampaignFolder + folderName);
                 parameters[3].Value = details.Item1;
                 parameters[4].Value = details.Item2;
                 parameters[5].Value = details.Item3;
@@ -570,10 +576,10 @@ namespace WindowsFormsApplication
                 ConsoleMessage(li.title);
                 if (IsNewCampaign(li.title, wechatName))
                 {
-                    Directory.CreateDirectory("E:\\Camp\\" + folderName);
+                    Directory.CreateDirectory(CampaignFolder + folderName);
                     Tuple<string, string, string> details = GetDetailContent(li.content_url.Replace("&amp;", "&"), folderName, "Camp");
                     parameters[0].Value = li.title;
-                    parameters[2].Value = "/Camp/"+ folderName + "/" + ReplaceAsLocalImg(li.cover, "E:\\Camp\\" + folderName);
+                    parameters[2].Value = "/Camp/" + folderName + "/" + ReplaceAsLocalImg(li.cover, CampaignFolder + folderName);
                     parameters[3].Value = details.Item1;
                     parameters[4].Value = details.Item2;
                     parameters[5].Value = details.Item3;
