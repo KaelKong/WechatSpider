@@ -27,6 +27,7 @@ namespace WindowsFormsApplication
         private DateTime LastDate { get; set; }
         private string ArticleFolder = ConfigurationManager.AppSettings["article"];
         private string CampaignFolder = ConfigurationManager.AppSettings["campaign"];
+        private int DelayTime = Convert.ToInt32(ConfigurationManager.AppSettings["delay"]);
 
         public void StartWork()
         {
@@ -52,13 +53,6 @@ namespace WindowsFormsApplication
             {
                 prgb.Value = i++;
                 ConsoleMessage("****************************");
-                //TimeSpan span = DateTime.Now - Convert.ToDateTime(dr["ModifyDate"]);
-                //if (span.TotalHours < 12)
-                //{
-                //    ConsoleMessage(dr["Name"].ToString().Trim() + "距上次抓取不足12小时");
-                //    continue;
-                //}
-
                 string name = dr["Name"].ToString().Trim();
                 string wechatID = dr["ID"].ToString();
                 string url = string.Format(SearchUrl, System.Web.HttpUtility.UrlEncode(name));
@@ -66,7 +60,7 @@ namespace WindowsFormsApplication
                 tbAddress.Text = url;
                 myWebBrowser.Navigate(url);
                 WaitWebPageLoad();
-                Delay(10000);
+                Delay(DelayTime);
                 string result = string.Empty;
                 try
                 {
@@ -93,6 +87,7 @@ namespace WindowsFormsApplication
                 }
                 else
                 {
+                    SqlHelper.ExecteNonQueryText($"UPDATE WechatList SET WechatStatus = 2 WHERE ID = {dr["ID"].ToString()}");
                     ConsoleMessage(name + "未搜索到匹配的主页");
                 }
 
@@ -100,6 +95,7 @@ namespace WindowsFormsApplication
             }
         }
 
+        //活动抓取
         private void GetIndexUrl2()
         {
             prgb.Maximum = WechatNames.Rows.Count;
@@ -115,7 +111,7 @@ namespace WindowsFormsApplication
                 tbAddress.Text = url;
                 myWebBrowser.Navigate(url);
                 WaitWebPageLoad();
-                Delay(10000);
+                Delay(DelayTime);
                 string result = string.Empty;
                 try
                 {
@@ -142,7 +138,7 @@ namespace WindowsFormsApplication
                 }
                 else
                 {
-
+                    SqlHelper.ExecteNonQueryText($"UPDATE DZDP SET MallStatus = 2 WHERE WechatName = '{dr["WechatName"].ToString()}' ");
                     ConsoleMessage(name + "未搜索到匹配的主页");
                 }
 
@@ -167,7 +163,7 @@ namespace WindowsFormsApplication
                 tbAddress.Text = url + $"/review_all?pageno=1";
                 myWebBrowser.Navigate(tbAddress.Text);
                 WaitWebPageLoad();
-                Delay(1000);
+                Delay(DelayTime);
                 string result = string.Empty;
                 try
                 {
@@ -203,8 +199,6 @@ namespace WindowsFormsApplication
                     break;
                 }
 
-
-
                 ConsoleMessage("****************************");
             }
         }
@@ -224,7 +218,7 @@ namespace WindowsFormsApplication
                 tbAddress.Text = url;
                 myWebBrowser.Navigate(url);
                 WaitWebPageLoad();
-                Delay(10000);
+                Delay(DelayTime);
                 string result = string.Empty;
                 try
                 {
@@ -262,6 +256,7 @@ namespace WindowsFormsApplication
             int executeNum = 0;
             myWebBrowser.Navigate(url);
             WaitWebPageLoad();
+            Delay(DelayTime);
             string result = myWebBrowser.DocumentText;
             CheckUrlContent(ref result, "为了保护你的网络安全，请输入验证码", url);
             Regex reg = new Regex(@"(?=(var msgList = ))var msgList =([.\s\S]*?(?=(}}]};))}}]});");
@@ -299,6 +294,7 @@ namespace WindowsFormsApplication
             int executeNum = 0;
             myWebBrowser.Navigate(url);
             WaitWebPageLoad();
+            Delay(DelayTime);
             string result = myWebBrowser.DocumentText;
             CheckUrlContent(ref result, "为了保护你的网络安全，请输入验证码", url);
             Regex reg = new Regex(@"(?=(var msgList = ))var msgList =([.\s\S]*?(?=(}}]};))}}]});");
@@ -321,14 +317,16 @@ namespace WindowsFormsApplication
             ConsoleMessage("--------------------------------");
         }
 
-        private Tuple<string, string, string> GetDetailContent(string url, string folder, string newFolder)
+        private Tuple<string, string, string> GetDetailContent(string url, string folder, string newFolder, string phsicPath)
         {
+            
             //url = url.Replace("&amp;", "&");
             if (string.IsNullOrEmpty(url)) return Tuple.Create<string, string, string>("", "", "");
             url = url.Contains("http://") ? url : "http://mp.weixin.qq.com" + url;
             tbAddress.Text = url;
             myWebBrowser.Navigate(url);
             WaitWebPageLoad();
+            Delay(DelayTime);
             //WaitingJs(@"sg_readNum3");
             string result = myWebBrowser.Document.Body.OuterHtml;
             //Regex reg = new Regex(@"<div class=""rich_media_content "" id=""js_content"">([.\s\S]*?(?=(</div>)))</div>[.\s\S]*?(?=(sg_readNum3))sg_readNum3"">([^<]*)</span>[.\s\S]*?(?=(sg_likeNum3))sg_likeNum3"">([^<]*)</span>");
@@ -346,7 +344,7 @@ namespace WindowsFormsApplication
                 foreach (Match match in imgMatches)
                 {
 
-                    string guid = Guid.NewGuid().ToString("N");
+                    //string guid = Guid.NewGuid().ToString("N");
                     string oldUrl = match.Groups[2].Value;
                     //string[] imgArr = oldUrl.Split(new string[] { "?wx_fmt=" }, StringSplitOptions.RemoveEmptyEntries);
                     //string exetent = "jpg";
@@ -354,7 +352,7 @@ namespace WindowsFormsApplication
                     //string imgName = guid + "." + exetent;
                     //DownloadImg(oldUrl, folder + "\\" + imgName);
                     //content = content.Replace(oldUrl, "/Image/" + folder + "/" + imgName);
-                    string newUrl = ReplaceAsLocalImg(oldUrl, "E://" + newFolder + "//" + folder);
+                    string newUrl = ReplaceAsLocalImg(oldUrl, phsicPath + "//" + folder);
                     content = content.Replace(match.Groups[0].Value, "<img src='/" + newFolder + "/" + folder + "/" + newUrl + "' />");
                 }
 
@@ -426,10 +424,11 @@ namespace WindowsFormsApplication
 
         }
 
+        
         private void btnSourceFile_Click(object sender, EventArgs e)
         {
             ConsoleMessage("#########抓取程序开始#########");
-            InitialData("SELECT * FROM DZDP");
+            InitialData("SELECT * FROM DZDP WHERE MallStatus = 1");
             LastDate = Convert.ToDateTime(SqlHelper.ExecuteScalarText("SELECT TOP 1 AddDate FROM Campaign ORDER BY ID DESC"));
             GetIndexUrl2();
             ConsoleMessage("#########抓取程序结束#########");
@@ -512,7 +511,7 @@ namespace WindowsFormsApplication
             if (IsNewArticle(content.comm_msg_info.id, content.app_msg_ext_info.title))
             {
                 Directory.CreateDirectory(ArticleFolder + folderName);
-                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName, "Image");
+                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName, "Image", ArticleFolder);
                 parameters[3].Value = "/Image/" + folderName + "/" + ReplaceAsLocalImg(content.app_msg_ext_info.cover, ArticleFolder + folderName);
                 parameters[13].Value = details.Item1;
                 parameters[15].Value = string.IsNullOrEmpty(details.Item2) ? "0" : details.Item2;
@@ -534,7 +533,7 @@ namespace WindowsFormsApplication
                     parameters[5].Value = li.fileid;
                     parameters[6].Value = li.source_url;
                     parameters[7].Value = li.title;
-                    Tuple<string, string, string> details = GetDetailContent(li.content_url.Replace("&amp;", "&"), folderName, "Image");
+                    Tuple<string, string, string> details = GetDetailContent(li.content_url.Replace("&amp;", "&"), folderName, "Image",ArticleFolder);
                     parameters[13].Value = details.Item1;
                     parameters[15].Value = string.IsNullOrEmpty(details.Item2) ? "0" : details.Item2;
                     parameters[16].Value = string.IsNullOrEmpty(details.Item3) ? "0" : details.Item3;
@@ -563,7 +562,7 @@ namespace WindowsFormsApplication
             if (IsNewCampaign(content.app_msg_ext_info.title, wechatName))
             {
                 Directory.CreateDirectory(CampaignFolder + folderName);
-                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName, "Camp");
+                Tuple<string, string, string> details = GetDetailContent(content.app_msg_ext_info.content_url.Replace("&amp;", "&"), folderName, "Camp", CampaignFolder);
                 parameters[2].Value = "/Camp/" + folderName + "/" + ReplaceAsLocalImg(content.app_msg_ext_info.cover, CampaignFolder + folderName);
                 parameters[3].Value = details.Item1;
                 parameters[4].Value = details.Item2;
@@ -577,7 +576,7 @@ namespace WindowsFormsApplication
                 if (IsNewCampaign(li.title, wechatName))
                 {
                     Directory.CreateDirectory(CampaignFolder + folderName);
-                    Tuple<string, string, string> details = GetDetailContent(li.content_url.Replace("&amp;", "&"), folderName, "Camp");
+                    Tuple<string, string, string> details = GetDetailContent(li.content_url.Replace("&amp;", "&"), folderName, "Camp", CampaignFolder);
                     parameters[0].Value = li.title;
                     parameters[2].Value = "/Camp/" + folderName + "/" + ReplaceAsLocalImg(li.cover, CampaignFolder + folderName);
                     parameters[3].Value = details.Item1;
@@ -610,7 +609,7 @@ namespace WindowsFormsApplication
             {
                 while (true)
                 {
-                    Delay(15000);
+                    Delay(DelayTime);
                     if (!myWebBrowser.DocumentText.Contains(key))
                     {
                         result = myWebBrowser.DocumentText;
@@ -626,7 +625,7 @@ namespace WindowsFormsApplication
             string sUrl;
             while (true)
             {
-                Delay(50);  //系统延迟50毫秒，够少了吧！               
+                Delay(DelayTime);  //系统延迟50毫秒，够少了吧！               
                 if (myWebBrowser.ReadyState == WebBrowserReadyState.Complete) //先判断是否发生完成事件。  
                 {
                     if (!myWebBrowser.IsBusy) //再判断是浏览器是否繁忙                    
@@ -680,7 +679,7 @@ namespace WindowsFormsApplication
             while (true)
             {
                 if (!myWebBrowser.Document.Body.OuterHtml.Contains(key)) break;
-                Delay(5000);
+                Delay(DelayTime);
             }
         }
 
