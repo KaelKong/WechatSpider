@@ -803,7 +803,7 @@ namespace WindowsFormsApplication
 
         private void button1_Click_1(object sender, EventArgs e)
         {
-            InitialData("SELECT * FROM WechatList WHERE WechatStatus = 1");
+            InitialData("SELECT * FROM WechatList WHERE ICON IS NULL AND WECHATSTATUS = 1");
             GetIndexUrl4();
         }
     }
